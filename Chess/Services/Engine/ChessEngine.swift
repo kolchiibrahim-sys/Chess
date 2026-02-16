@@ -32,7 +32,9 @@ final class ChessEngine {
             return QueenMoves.moves(for: piece, pieces: pieces)
 
         case .king:
-            return KingMoves.moves(for: piece, pieces: pieces)
+            let normalMoves = KingMoves.moves(for: piece, pieces: pieces)
+            let castling = CastlingMoves.moves(for: piece, pieces: pieces)
+            return normalMoves + castling
         }
     }
 }

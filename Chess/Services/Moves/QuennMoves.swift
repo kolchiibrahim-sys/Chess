@@ -7,8 +7,13 @@
 import Foundation
 
 enum QueenMoves {
+
     static func moves(for piece: ChessPiece,
                       pieces: [ChessPiece]) -> [(Int, Int)] {
-        return []
+
+        let rookMoves = RookMoves.moves(for: piece, pieces: pieces)
+        let bishopMoves = BishopMoves.moves(for: piece, pieces: pieces)
+
+        return rookMoves + bishopMoves
     }
 }
