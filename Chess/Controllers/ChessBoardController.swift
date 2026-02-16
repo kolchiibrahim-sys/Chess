@@ -20,6 +20,7 @@ final class ChessBoardController: UIViewController {
         bindViewModel()
         viewModel.fetchBoard()
         SoundManager.shared.gameStart()
+        BoardAnimator.flip(boardView.collection, for: .white)
     }
 
     private func setupUI() {
@@ -54,10 +55,13 @@ final class ChessBoardController: UIViewController {
     private func bindViewModel() {
 
         viewModel.reloadBoard = { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
 
             self.updateTitle()
             self.boardView.collection.reloadData()
+
+            BoardAnimator.flip(self.boardView.collection,
+                               for: self.viewModel.currentTurn)
 
             self.capturedTop.configure(
                 with: self.viewModel.capturedBlack,
