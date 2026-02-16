@@ -79,12 +79,15 @@ extension ChessBoardController: UICollectionViewDataSource {
         let isPossibleMove =
             viewModel.possibleMoves.contains(where: { $0.row == row && $0.col == col })
 
+        let isKingInCheck = viewModel.isKingCell(row: row, col: col)
+
         cell.configure(
             row: row,
             col: col,
             piece: piece,
             isSelected: isSelected,
-            isPossibleMove: isPossibleMove
+            isPossibleMove: isPossibleMove,
+            isKingInCheck: isKingInCheck
         )
 
         return cell
