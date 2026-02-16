@@ -4,19 +4,92 @@
 //
 //  Created by Ibrahim Kolchi on 17.02.26.
 //
-import AudioToolbox
+import AVFoundation
 
-enum SoundManager {
+final class SoundManager {
 
-    static func playCheckSound() {
-        AudioServicesPlaySystemSound(1016) // short alert
+    static let shared = SoundManager()
+    private init() {
+        prepareAudioSession()
     }
 
-    static func playMoveSound() {
-        AudioServicesPlaySystemSound(1104) // subtle tap
+    private var player: AVAudioPlayer?
+
+    // MARK: - Audio Session (important)
+
+    private func prepareAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("AudioSession error:", error)
+        }
     }
 
-    static func playCheckmateSound() {
-        AudioServicesPlaySystemSound(1025) // success
+    // MARK: - Core play function
+
+    private func play(_ file: String) {
+
+        guard let url = Bundle.main.url(forResource: file, withExtension: "mp3") else {
+            print("Sound not found:", file)
+            return
+        }
+
+        do {
+            player = try AVAudioPlayer(contentsOf: url)
+            player?.volume = 1.0
+            player?.prepareToPlay()
+            player?.play()
+        } catch {
+            print(" Sound play error:", error)
+        }
+    }
+
+    // MARK: - Game Events
+
+    func gameStart() {
+        play("game-start")
+    }
+
+    func gameEnd() {
+        play("game-end")
+    }
+
+    func notify() {
+        play("notify")
+    }
+
+    // MARK: - Moves
+
+    func moveSelf() {
+        play("move-self")
+    }
+
+    func moveOpponent() {
+        play("move-opponent")
+    }
+
+    func capture() {
+        play("capture")
+    }
+
+    func castle() {
+        play("castle")
+    }
+
+    func check() {
+        play("move-check")
+    }
+
+    func checkmate() {
+        play("game-end")   // chess.com 
+    }
+
+    func illegal() {
+        play("illegal")
+    }
+
+    func promote() {
+        play("promote")
     }
 }

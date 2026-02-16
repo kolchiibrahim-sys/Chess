@@ -8,17 +8,22 @@ import Foundation
 
 final class ChessBoardViewModel {
 
+    // MARK: - State
+
     private(set) var pieces: [ChessPiece] = []
     private(set) var selectedPiece: ChessPiece?
     private(set) var possibleMoves: [(row: Int, col: Int)] = []
-    private(set) var currentTurn: PieceColor = .white
 
+    private(set) var currentTurn: PieceColor = .white
     private(set) var kingInCheck: PieceColor?
     private(set) var checkmateWinner: PieceColor?
 
-    var reloadBoard: (() -> Void)?
+    // MARK: - Bindings
 
-    // MARK: - Fetch
+    var reloadBoard: (() -> Void)?
+    var didMovePiece: ((_ r1:Int,_ c1:Int,_ r2:Int,_ c2:Int) -> Void)?
+
+    // MARK: - Fetch Board
 
     func fetchBoard() {
         LocalNetworkManager.shared.fetchBoard { [weak self] result in
@@ -42,7 +47,6 @@ final class ChessBoardViewModel {
 
     func isKingCell(row: Int, col: Int) -> Bool {
         guard let color = kingInCheck else { return false }
-
         return pieces.contains {
             $0.type == .king &&
             $0.color == color &&
@@ -51,91 +55,72 @@ final class ChessBoardViewModel {
         }
     }
 
-    // MARK: - Selection
+    // MARK: - Selection / Move Logic
 
     func selectPiece(at row: Int, col: Int) {
 
-        if let selected = selectedPiece,
-           possibleMoves.contains(where: { $0.row == row && $0.col == col }) {
-            movePiece(to: row, col: col)
-            return
-        }
-
-        if let piece = piece(at: row, col: col) {
-
-            if piece.color != currentTurn { return }
-
-            selectedPiece = piece
-            possibleMoves = ChessEngine.shared.possibleMoves(for: piece, pieces: pieces)
-
-        } else {
-            selectedPiece = nil
-            possibleMoves.removeAll()
-        }
-
-        reloadBoard?()
-    }
-
-    // MARK: - Move Logic
-
-    private func movePiece(to row: Int, col: Int) {
-
-        guard let selected = selectedPiece else { return }
-
-        // capture
-        if let enemyIndex = pieces.firstIndex(where: {
-            $0.row == row && $0.col == col && $0.color != selected.color
-        }) {
-            pieces.remove(at: enemyIndex)
-        }
-
-        // move piece
-        if let index = pieces.firstIndex(where: {
-            $0.row == selected.row && $0.col == selected.col
-        }) {
-            pieces[index] = ChessPiece(
-                type: selected.type,
-                color: selected.color,
-                row: row,
-                col: col,
-                hasMoved: true
-            )
-        }
-
-        // castling rook move
-        if selected.type == .king && abs(col - selected.col) == 2 {
-
-            let rookStartCol = col == 6 ? 7 : 0
-            let rookEndCol = col == 6 ? 5 : 3
-
-            if let rookIndex = pieces.firstIndex(where: {
-                $0.type == .rook &&
-                $0.color == selected.color &&
-                $0.row == row &&
-                $0.col == rookStartCol
-            }) {
-                pieces[rookIndex] = ChessPiece(
-                    type: .rook,
-                    color: selected.color,
-                    row: row,
-                    col: rookEndCol,
-                    hasMoved: true
-                )
+        // move etmək istəyir?
+        if let selected = selectedPiece {
+            if possibleMoves.contains(where: { $0.row == row && $0.col == col }) {
+                movePiece(to: row, col: col)
+                return
             }
         }
 
+        // yeni fiqur seç
+        guard let piece = piece(at: row, col: col),
+              piece.color == currentTurn else {
+            selectedPiece = nil
+            possibleMoves.removeAll()
+            reloadBoard?()
+            return
+        }
+
+        selectedPiece = piece
+        possibleMoves = ChessEngine.shared.possibleMoves(for: piece, pieces: pieces)
+        reloadBoard?()
+    }
+
+    // MARK: - MOVE PIECE
+
+    private func movePiece(to row: Int, col: Int) {
+
+        guard let selected = selectedPiece,
+              let index = pieces.firstIndex(where: {
+                  $0.row == selected.row && $0.col == selected.col
+              }) else { return }
+
+        let oldRow = selected.row
+        let oldCol = selected.col
+
+        // capture varsa sil
+        pieces.removeAll {
+            $0.row == row && $0.col == col && $0.color != selected.color
+        }
+
+        // fiquru köçür
+        pieces[index] = ChessPiece(
+            type: selected.type,
+            color: selected.color,
+            row: row,
+            col: col,
+            hasMoved: true
+        )
+
+        //  move sound
+        SoundManager.shared.moveSelf()
+
         // turn change
         currentTurn = currentTurn == .white ? .black : .white
-        SoundManager.playMoveSound()
 
         // CHECK detection
         if CheckValidator.isKingInCheck(color: .white, pieces: pieces) {
             kingInCheck = .white
-            SoundManager.playCheckSound()
+            SoundManager.shared.check()
         }
         else if CheckValidator.isKingInCheck(color: .black, pieces: pieces) {
             kingInCheck = .black
-            SoundManager.playCheckSound()
+            SoundManager.shared.check()
         }
         else {
             kingInCheck = nil
@@ -144,15 +129,20 @@ final class ChessBoardViewModel {
         // CHECKMATE detection
         if CheckmateValidator.isCheckmate(color: .white, pieces: pieces) {
             checkmateWinner = .black
-            SoundManager.playCheckmateSound()
+            SoundManager.shared.checkmate()
         }
-        else if CheckmateValidator.isCheckmate(color: .black, pieces: pieces) {
+        if CheckmateValidator.isCheckmate(color: .black, pieces: pieces) {
             checkmateWinner = .white
-            SoundManager.playCheckmateSound()
+            SoundManager.shared.checkmate()
         }
 
+        // clean selection
         selectedPiece = nil
         possibleMoves.removeAll()
+
+        // animation trigger
+        didMovePiece?(oldRow, oldCol, row, col)
+
         reloadBoard?()
     }
 }
