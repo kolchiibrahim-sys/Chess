@@ -8,14 +8,13 @@ import Foundation
 
 final class ChessBoardViewModel {
 
-    // MARK: - Properties
 
     private(set) var pieces: [ChessPiece] = []
     private(set) var selectedPiece: ChessPiece?
+    private(set) var possibleMoves: [(row: Int, col: Int)] = []
 
     var reloadBoard: (() -> Void)?
 
-    // MARK: - Fetch (Mock API)
 
     func fetchBoard() {
         LocalNetworkManager.shared.fetchBoard { [weak self] result in
@@ -25,28 +24,48 @@ final class ChessBoardViewModel {
                 DispatchQueue.main.async {
                     self?.reloadBoard?()
                 }
-
             case .failure(let error):
                 print("Fetch error:", error)
             }
         }
     }
 
-    // MARK: - Helpers
-
     func piece(at row: Int, col: Int) -> ChessPiece? {
         pieces.first { $0.row == row && $0.col == col }
     }
 
-    // MARK: - Selection
 
     func selectPiece(at row: Int, col: Int) {
-        if let piece = piece(at: row, col: col) {
-            selectedPiece = piece
-        } else {
-            selectedPiece = nil
+
+        if let selected = selectedPiece,
+           possibleMoves.contains(where: { $0.row == row && $0.col == col }) {
+            movePiece(to: row, col: col)
+            return
         }
 
-        reloadBoard?() // selection dəyişəndə board yenilənsin
+        if let piece = piece(at: row, col: col) {
+            selectedPiece = piece
+            possibleMoves = ChessEngine.shared.possibleMoves(for: piece, pieces: pieces)
+        } else {
+            selectedPiece = nil
+            possibleMoves.removeAll()
+        }
+
+        reloadBoard?()
+    }
+
+    private func movePiece(to row: Int, col: Int) {
+        guard let selected = selectedPiece else { return }
+
+        if let index = pieces.firstIndex(where: { $0.row == selected.row && $0.col == selected.col }) {
+            pieces[index] = ChessPiece(type: selected.type,
+                                       color: selected.color,
+                                       row: row,
+                                       col: col)
+        }
+
+        selectedPiece = nil
+        possibleMoves.removeAll()
+        reloadBoard?()
     }
 }

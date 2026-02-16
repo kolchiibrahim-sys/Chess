@@ -31,7 +31,7 @@ final class ChessBoardController: UIViewController {
 
         setupUI()
         bindViewModel()
-        viewModel.fetchBoard()   // JSON fetch
+        viewModel.fetchBoard()
     }
 
     private func setupUI() {
@@ -40,11 +40,9 @@ final class ChessBoardController: UIViewController {
         NSLayoutConstraint.activate([
             collection.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
             collection.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-
             collection.widthAnchor.constraint(equalTo: view.safeAreaLayoutGuide.widthAnchor, multiplier: 0.95),
             collection.heightAnchor.constraint(equalTo: collection.widthAnchor)
         ])
-    
     }
 
     private func bindViewModel() {
@@ -78,7 +76,16 @@ extension ChessBoardController: UICollectionViewDataSource {
             viewModel.selectedPiece?.row == row &&
             viewModel.selectedPiece?.col == col
 
-        cell.configure(row: row, col: col, piece: piece, isSelected: isSelected)
+        let isPossibleMove =
+            viewModel.possibleMoves.contains(where: { $0.row == row && $0.col == col })
+
+        cell.configure(
+            row: row,
+            col: col,
+            piece: piece,
+            isSelected: isSelected,
+            isPossibleMove: isPossibleMove
+        )
 
         return cell
     }
@@ -95,6 +102,7 @@ extension ChessBoardController: UICollectionViewDelegateFlowLayout {
         return CGSize(width: cellSize, height: cellSize)
     }
 }
+
 // MARK: - Selection
 extension ChessBoardController: UICollectionViewDelegate {
 
@@ -104,6 +112,6 @@ extension ChessBoardController: UICollectionViewDelegate {
         let col = indexPath.item % 8
 
         viewModel.selectPiece(at: row, col: col)
-        collection.reloadData()
+      
     }
 }
