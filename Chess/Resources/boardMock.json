@@ -1,0 +1,39 @@
+{
+  "pieces": [
+    { "type": "rook", "color": "white", "row": 7, "col": 0 },
+    { "type": "knight", "color": "white", "row": 7, "col": 1 },
+    { "type": "bishop", "color": "white", "row": 7, "col": 2 },
+    { "type": "queen", "color": "white", "row": 7, "col": 3 },
+    { "type": "king", "color": "white", "row": 7, "col": 4 },
+    { "type": "bishop", "color": "white", "row": 7, "col": 5 },
+    { "type": "knight", "color": "white", "row": 7, "col": 6 },
+    { "type": "rook", "color": "white", "row": 7, "col": 7 },
+
+    { "type": "pawn", "color": "white", "row": 6, "col": 0 },
+    { "type": "pawn", "color": "white", "row": 6, "col": 1 },
+    { "type": "pawn", "color": "white", "row": 6, "col": 2 },
+    { "type": "pawn", "color": "white", "row": 6, "col": 3 },
+    { "type": "pawn", "color": "white", "row": 6, "col": 4 },
+    { "type": "pawn", "color": "white", "row": 6, "col": 5 },
+    { "type": "pawn", "color": "white", "row": 6, "col": 6 },
+    { "type": "pawn", "color": "white", "row": 6, "col": 7 },
+
+    { "type": "rook", "color": "black", "row": 0, "col": 0 },
+    { "type": "knight", "color": "black", "row": 0, "col": 1 },
+    { "type": "bishop", "color": "black", "row": 0, "col": 2 },
+    { "type": "queen", "color": "black", "row": 0, "col": 3 },
+    { "type": "king", "color": "black", "row": 0, "col": 4 },
+    { "type": "bishop", "color": "black", "row": 0, "col": 5 },
+    { "type": "knight", "color": "black", "row": 0, "col": 6 },
+    { "type": "rook", "color": "black", "row": 0, "col": 7 },
+
+    { "type": "pawn", "color": "black", "row": 1, "col": 0 },
+    { "type": "pawn", "color": "black", "row": 1, "col": 1 },
+    { "type": "pawn", "color": "black", "row": 1, "col": 2 },
+    { "type": "pawn", "color": "black", "row": 1, "col": 3 },
+    { "type": "pawn", "color": "black", "row": 1, "col": 4 },
+    { "type": "pawn", "color": "black", "row": 1, "col": 5 },
+    { "type": "pawn", "color": "black", "row": 1, "col": 6 },
+    { "type": "pawn", "color": "black", "row": 1, "col": 7 }
+  ]
+}
