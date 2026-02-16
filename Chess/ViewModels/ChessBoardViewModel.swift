@@ -8,22 +8,28 @@ import Foundation
 
 final class ChessBoardViewModel {
 
-    // MARK: - State
+    // MARK: - STATE
 
     private(set) var pieces: [ChessPiece] = []
     private(set) var selectedPiece: ChessPiece?
-    private(set) var possibleMoves: [(row: Int, col: Int)] = []
+    private(set) var possibleMoves: [(row:Int,col:Int)] = []
+
+    private(set) var capturedWhite: [ChessPiece] = []
+    private(set) var capturedBlack: [ChessPiece] = []
 
     private(set) var currentTurn: PieceColor = .white
     private(set) var kingInCheck: PieceColor?
     private(set) var checkmateWinner: PieceColor?
+
+    private(set) var whiteAdvantage: Int = 0
+    private(set) var blackAdvantage: Int = 0
 
     // MARK: - Bindings
 
     var reloadBoard: (() -> Void)?
     var didMovePiece: ((_ r1:Int,_ c1:Int,_ r2:Int,_ c2:Int) -> Void)?
 
-    // MARK: - Fetch Board
+    // MARK: - FETCH BOARD (MOCK)
 
     func fetchBoard() {
         LocalNetworkManager.shared.fetchBoard { [weak self] result in
@@ -39,7 +45,7 @@ final class ChessBoardViewModel {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - HELPERS
 
     func piece(at row: Int, col: Int) -> ChessPiece? {
         pieces.first { $0.row == row && $0.col == col }
@@ -55,16 +61,15 @@ final class ChessBoardViewModel {
         }
     }
 
-    // MARK: - Selection / Move Logic
+    // MARK: - SELECT PIECE / TAP LOGIC
 
     func selectPiece(at row: Int, col: Int) {
 
-        // move etmək istəyir?
-        if let selected = selectedPiece {
-            if possibleMoves.contains(where: { $0.row == row && $0.col == col }) {
-                movePiece(to: row, col: col)
-                return
-            }
+        // əgər fiqur seçilib və possible move-dursa → move et
+        if let selected = selectedPiece,
+           possibleMoves.contains(where: { $0.row == row && $0.col == col }) {
+            movePiece(to: row, col: col)
+            return
         }
 
         // yeni fiqur seç
@@ -81,25 +86,38 @@ final class ChessBoardViewModel {
         reloadBoard?()
     }
 
-    // MARK: - MOVE PIECE
+    // MARK: - MOVE PIECE (CORE ENGINE)
 
     private func movePiece(to row: Int, col: Int) {
 
-        guard let selected = selectedPiece,
-              let index = pieces.firstIndex(where: {
-                  $0.row == selected.row && $0.col == selected.col
-              }) else { return }
+        guard let selected = selectedPiece else { return }
 
         let oldRow = selected.row
         let oldCol = selected.col
 
-        // capture varsa sil
-        pieces.removeAll {
-            $0.row == row && $0.col == col && $0.color != selected.color
+        // selected fiquru sil
+        pieces.removeAll { $0.row == oldRow && $0.col == oldCol }
+
+        // CAPTURE varsa
+        if let capturedIndex = pieces.firstIndex(where: { $0.row == row && $0.col == col }) {
+
+            let captured = pieces[capturedIndex]
+
+            if captured.color == .white {
+                capturedWhite.append(captured)
+            } else {
+                capturedBlack.append(captured)
+            }
+
+            pieces.remove(at: capturedIndex)
+            SoundManager.shared.capture()
+
+        } else {
+            SoundManager.shared.moveSelf()
         }
 
-        // fiquru köçür
-        pieces[index] = ChessPiece(
+        // yeni mövqedə fiquru əlavə et
+        let movedPiece = ChessPiece(
             type: selected.type,
             color: selected.color,
             row: row,
@@ -107,10 +125,9 @@ final class ChessBoardViewModel {
             hasMoved: true
         )
 
-        //  move sound
-        SoundManager.shared.moveSelf()
+        pieces.append(movedPiece)
 
-        // turn change
+        // TURN dəyiş
         currentTurn = currentTurn == .white ? .black : .white
 
         // CHECK detection
@@ -129,19 +146,25 @@ final class ChessBoardViewModel {
         // CHECKMATE detection
         if CheckmateValidator.isCheckmate(color: .white, pieces: pieces) {
             checkmateWinner = .black
-            SoundManager.shared.checkmate()
-        }
-        if CheckmateValidator.isCheckmate(color: .black, pieces: pieces) {
-            checkmateWinner = .white
-            SoundManager.shared.checkmate()
+            SoundManager.shared.gameEnd()
         }
 
-        // clean selection
+        if CheckmateValidator.isCheckmate(color: .black, pieces: pieces) {
+            checkmateWinner = .white
+            SoundManager.shared.gameEnd()
+        }
+
+        // seçimləri sıfırla
         selectedPiece = nil
         possibleMoves.removeAll()
 
-        // animation trigger
+        // animasiya üçün callback
         didMovePiece?(oldRow, oldCol, row, col)
+
+        // material score hesabla
+        let advantage = MaterialCalculator.materialAdvantage(pieces: pieces)
+        whiteAdvantage = advantage.white
+        blackAdvantage = advantage.black
 
         reloadBoard?()
     }

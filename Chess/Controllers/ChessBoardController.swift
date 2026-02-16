@@ -3,55 +3,71 @@
 //  Chess
 //
 //  Created by Ibrahim Kolchi on 16.02.26.
-//
 import UIKit
 
 final class ChessBoardController: UIViewController {
 
     private let viewModel = ChessBoardViewModel()
     private let boardView = ChessBoardView()
+    private let capturedTop = CapturedPiecesView()
+    private let capturedBottom = CapturedPiecesView()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
         view.backgroundColor = .systemBackground
         setupUI()
         setupCollection()
         bindViewModel()
         viewModel.fetchBoard()
-
         SoundManager.shared.gameStart()
     }
 
-    // MARK: - UI
-
     private func setupUI() {
-        view.addSubview(boardView)
-        boardView.translatesAutoresizingMaskIntoConstraints = false
+        let stack = UIStackView(arrangedSubviews: [
+            capturedTop,
+            boardView,
+            capturedBottom
+        ])
+
+        stack.axis = .vertical
+        stack.spacing = 12
+
+        view.addSubview(stack)
+        stack.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            boardView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            boardView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            boardView.widthAnchor.constraint(equalTo: view.safeAreaLayoutGuide.widthAnchor, multiplier: 0.95),
+            stack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             boardView.heightAnchor.constraint(equalTo: boardView.widthAnchor)
         ])
     }
 
     private func setupCollection() {
         let collection = boardView.collection
-
         collection.backgroundColor = .clear
         collection.register(ChessCell.self, forCellWithReuseIdentifier: ChessCell.identifier)
         collection.dataSource = self
         collection.delegate = self
-        collection.translatesAutoresizingMaskIntoConstraints = false
     }
 
     private func bindViewModel() {
 
         viewModel.reloadBoard = { [weak self] in
-            self?.updateTitle()
-            self?.boardView.collection.reloadData()
+            guard let self = self else { return }
+
+            self.updateTitle()
+            self.boardView.collection.reloadData()
+
+            self.capturedTop.configure(
+                with: self.viewModel.capturedBlack,
+                score: self.viewModel.blackAdvantage
+            )
+
+            self.capturedBottom.configure(
+                with: self.viewModel.capturedWhite,
+                score: self.viewModel.whiteAdvantage
+            )
         }
 
         viewModel.didMovePiece = { [weak self] r1,c1,r2,c2 in
@@ -59,10 +75,7 @@ final class ChessBoardController: UIViewController {
         }
     }
 
-    // MARK: - Title updates
-
     private func updateTitle() {
-
         if let winner = viewModel.checkmateWinner {
             title = "CHECKMATE 👑 \(winner == .white ? "White" : "Black") wins"
             return
@@ -74,8 +87,6 @@ final class ChessBoardController: UIViewController {
             title = "Chess ♟️"
         }
     }
-
-    // MARK: - Animation
 
     private func animateMove(from old:(Int,Int), to new:(Int,Int)) {
 
@@ -104,6 +115,7 @@ final class ChessBoardController: UIViewController {
         }
     }
 }
+
 extension ChessBoardController: UICollectionViewDataSource {
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -144,6 +156,7 @@ extension ChessBoardController: UICollectionViewDataSource {
         return cell
     }
 }
+
 extension ChessBoardController: UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
@@ -152,6 +165,7 @@ extension ChessBoardController: UICollectionViewDelegate {
         viewModel.selectPiece(at: row, col: col)
     }
 }
+
 extension ChessBoardController: UICollectionViewDelegateFlowLayout {
 
     func collectionView(_ collectionView: UICollectionView,
