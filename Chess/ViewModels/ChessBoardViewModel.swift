@@ -78,17 +78,22 @@ final class ChessBoardViewModel {
     }
 
     private func performCastlingIfNeeded(king: ChessPiece, fromCol: Int, toCol: Int, row: Int) {
+
         if abs(fromCol - toCol) != 2 { return }
 
         if toCol == 6 {
             if let rookIndex = pieces.firstIndex(where: { $0.type == .rook && $0.row == row && $0.col == 7 }) {
                 let rook = pieces.remove(at: rookIndex)
-                pieces.append(ChessPiece(type: .rook, color: rook.color, row: row, col: 5, hasMoved: true))
+                pieces.append(
+                    ChessPiece(type: .rook, color: rook.color, row: row, col: 5, hasMoved: true)
+                )
             }
         } else if toCol == 2 {
             if let rookIndex = pieces.firstIndex(where: { $0.type == .rook && $0.row == row && $0.col == 0 }) {
                 let rook = pieces.remove(at: rookIndex)
-                pieces.append(ChessPiece(type: .rook, color: rook.color, row: row, col: 3, hasMoved: true))
+                pieces.append(
+                    ChessPiece(type: .rook, color: rook.color, row: row, col: 3, hasMoved: true)
+                )
             }
         }
 
@@ -150,6 +155,7 @@ final class ChessBoardViewModel {
         }
 
         currentTurn = currentTurn == .white ? .black : .white
+        ChessClockManager.shared.switchTurn(to: currentTurn)
 
         if CheckValidator.isKingInCheck(color: .white, pieces: pieces) {
             kingInCheck = .white

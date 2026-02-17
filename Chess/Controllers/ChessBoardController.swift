@@ -8,7 +8,8 @@ import UIKit
 final class ChessBoardController: UIViewController {
 
     private let viewModel = ChessBoardViewModel()
-
+    private let whiteClock = ClockView()
+    private let blackClock = ClockView()
     private let boardView = ChessBoardView()
     private let capturedTop = CapturedPiecesView()
     private let capturedBottom = CapturedPiecesView()
@@ -24,9 +25,8 @@ final class ChessBoardController: UIViewController {
         viewModel.fetchBoard()
         SoundManager.shared.gameStart()
         BoardAnimator.flip(boardView.collection, for: .white)
+        ChessClockManager.shared.start(turn: .white)
     }
-
-    // MARK: REAL CHESS LAYOUT
 
     private func setupUI() {
 
@@ -34,19 +34,24 @@ final class ChessBoardController: UIViewController {
         view.addSubview(boardView)
         view.addSubview(capturedBottom)
         view.addSubview(historyView)
+        view.addSubview(whiteClock)
+        view.addSubview(blackClock)
 
         capturedTop.translatesAutoresizingMaskIntoConstraints = false
         boardView.translatesAutoresizingMaskIntoConstraints = false
         capturedBottom.translatesAutoresizingMaskIntoConstraints = false
         historyView.translatesAutoresizingMaskIntoConstraints = false
+        whiteClock.translatesAutoresizingMaskIntoConstraints = false
+        blackClock.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-
-            // opponent captured pieces (TOP)
             capturedTop.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             capturedTop.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             capturedTop.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             capturedTop.heightAnchor.constraint(equalToConstant: 40),
+
+            blackClock.trailingAnchor.constraint(equalTo: capturedTop.trailingAnchor),
+            blackClock.centerYAnchor.constraint(equalTo: capturedTop.centerYAnchor),
 
             boardView.topAnchor.constraint(equalTo: capturedTop.bottomAnchor, constant: 8),
             boardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
@@ -57,6 +62,9 @@ final class ChessBoardController: UIViewController {
             capturedBottom.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             capturedBottom.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             capturedBottom.heightAnchor.constraint(equalToConstant: 40),
+
+            whiteClock.trailingAnchor.constraint(equalTo: capturedBottom.trailingAnchor),
+            whiteClock.centerYAnchor.constraint(equalTo: capturedBottom.centerYAnchor),
 
             historyView.topAnchor.constraint(equalTo: capturedBottom.bottomAnchor, constant: 8),
             historyView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -73,8 +81,19 @@ final class ChessBoardController: UIViewController {
         collection.delegate = self
     }
 
-
     private func bindViewModel() {
+
+        ChessClockManager.shared.onTick = { [weak self] in
+            guard let self else { return }
+            self.whiteClock.setTime(ChessClockManager.shared.formattedWhiteTime())
+            self.blackClock.setTime(ChessClockManager.shared.formattedBlackTime())
+        }
+
+        ChessClockManager.shared.onTimeOver = { [weak self] loser in
+            guard let self else { return }
+            let winner: PieceColor = loser == .white ? .black : .white
+            self.showGameOverAlert(winner: winner)
+        }
 
         viewModel.reloadBoard = { [weak self] in
             guard let self else { return }
@@ -116,7 +135,6 @@ final class ChessBoardController: UIViewController {
         }
     }
 
-
     private func updateTitle() {
         if let color = viewModel.kingInCheck {
             title = "CHECK ⚠️ \(color == .white ? "White" : "Black") king"
@@ -125,9 +143,7 @@ final class ChessBoardController: UIViewController {
         }
     }
 
-
     private func showGameOverAlert(winner: PieceColor) {
-
         let alert = UIAlertController(
             title: "CHECKMATE 👑",
             message: "\(winner == .white ? "White" : "Black") wins!",
@@ -136,6 +152,8 @@ final class ChessBoardController: UIViewController {
 
         alert.addAction(UIAlertAction(title: "New Game", style: .default) { _ in
             self.viewModel.resetGame()
+            ChessClockManager.shared.reset()
+            ChessClockManager.shared.start(turn: .white)
         })
 
         present(alert, animated: true)
@@ -168,6 +186,7 @@ final class ChessBoardController: UIViewController {
         }
     }
 }
+
 extension ChessBoardController: UICollectionViewDataSource {
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int { 64 }
