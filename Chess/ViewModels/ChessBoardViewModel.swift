@@ -24,15 +24,12 @@ final class ChessBoardViewModel {
     private(set) var promotionPiece: ChessPiece?
     var showPromotion: (() -> Void)?
 
-    // MARK: Move history (notation)
     private(set) var moveHistory: [MoveRecord] = []
     private var pendingWhiteMove: String?
 
-    // MARK: Bindings
     var reloadBoard: (() -> Void)?
     var didMovePiece: ((_ r1:Int,_ c1:Int,_ r2:Int,_ c2:Int) -> Void)?
 
-    // MARK: Fetch board
     func fetchBoard() {
         LocalNetworkManager.shared.fetchBoard { [weak self] result in
             switch result {
@@ -45,7 +42,6 @@ final class ChessBoardViewModel {
         }
     }
 
-    // MARK: Helpers
     func piece(at row: Int, col: Int) -> ChessPiece? {
         pieces.first { $0.row == row && $0.col == col }
     }
@@ -60,7 +56,6 @@ final class ChessBoardViewModel {
         }
     }
 
-    // MARK: Selection
     func selectPiece(at row: Int, col: Int) {
 
         if let selected = selectedPiece,
@@ -82,25 +77,39 @@ final class ChessBoardViewModel {
         reloadBoard?()
     }
 
-    // MARK: CORE MOVE ENGINE
+    private func performCastlingIfNeeded(king: ChessPiece, fromCol: Int, toCol: Int, row: Int) {
+        if abs(fromCol - toCol) != 2 { return }
+
+        if toCol == 6 {
+            if let rookIndex = pieces.firstIndex(where: { $0.type == .rook && $0.row == row && $0.col == 7 }) {
+                let rook = pieces.remove(at: rookIndex)
+                pieces.append(ChessPiece(type: .rook, color: rook.color, row: row, col: 5, hasMoved: true))
+            }
+        } else if toCol == 2 {
+            if let rookIndex = pieces.firstIndex(where: { $0.type == .rook && $0.row == row && $0.col == 0 }) {
+                let rook = pieces.remove(at: rookIndex)
+                pieces.append(ChessPiece(type: .rook, color: rook.color, row: row, col: 3, hasMoved: true))
+            }
+        }
+
+        SoundManager.shared.castle()
+    }
+
     private func movePiece(to row: Int, col: Int) {
 
         guard let selected = selectedPiece else { return }
 
         let oldRow = selected.row
         let oldCol = selected.col
-
         let isCapture = piece(at: row, col: col) != nil
 
         pieces.removeAll { $0.row == oldRow && $0.col == oldCol }
 
         if let capturedIndex = pieces.firstIndex(where: { $0.row == row && $0.col == col }) {
-
             let captured = pieces[capturedIndex]
             captured.color == .white ? capturedWhite.append(captured) : capturedBlack.append(captured)
             pieces.remove(at: capturedIndex)
             SoundManager.shared.capture()
-
         } else {
             SoundManager.shared.moveSelf()
         }
@@ -115,7 +124,10 @@ final class ChessBoardViewModel {
 
         pieces.append(movedPiece)
 
-        // MARK: CHESS NOTATION
+        if selected.type == .king {
+            performCastlingIfNeeded(king: selected, fromCol: oldCol, toCol: col, row: row)
+        }
+
         let notation = ChessNotationConverter.notation(
             piece: selected,
             fromRow: oldRow,
@@ -128,38 +140,27 @@ final class ChessBoardViewModel {
         if selected.color == .white {
             pendingWhiteMove = notation
         } else {
-            moveHistory.append(
-                MoveRecord(
-                    whiteMove: pendingWhiteMove,
-                    blackMove: notation
-                )
-            )
+            moveHistory.append(MoveRecord(whiteMove: pendingWhiteMove, blackMove: notation))
             pendingWhiteMove = nil
         }
 
-        // Promotion trigger
         if PromotionDetector.shouldPromote(movedPiece) {
             promotionPiece = movedPiece
             showPromotion?()
         }
 
-        // Turn change
         currentTurn = currentTurn == .white ? .black : .white
 
-        // CHECK detection
         if CheckValidator.isKingInCheck(color: .white, pieces: pieces) {
             kingInCheck = .white
             SoundManager.shared.check()
-        }
-        else if CheckValidator.isKingInCheck(color: .black, pieces: pieces) {
+        } else if CheckValidator.isKingInCheck(color: .black, pieces: pieces) {
             kingInCheck = .black
             SoundManager.shared.check()
-        }
-        else {
+        } else {
             kingInCheck = nil
         }
 
-        // CHECKMATE detection
         if CheckmateValidator.isCheckmate(color: .white, pieces: pieces) {
             checkmateWinner = .black
             SoundManager.shared.gameEnd()
@@ -184,35 +185,27 @@ final class ChessBoardViewModel {
 
     func promotePawn(to option: PromotionOption) {
         guard let pawn = promotionPiece else { return }
-
         pieces.removeAll { $0.row == pawn.row && $0.col == pawn.col }
         let promoted = PromotionHandler.promote(piece: pawn, to: option)
         pieces.append(promoted)
-
         SoundManager.shared.promote()
         promotionPiece = nil
         reloadBoard?()
     }
 
     func resetGame() {
-
         pieces = GameResetManager.initialBoard()
-
         capturedWhite.removeAll()
         capturedBlack.removeAll()
         moveHistory.removeAll()
         pendingWhiteMove = nil
-
         selectedPiece = nil
         possibleMoves.removeAll()
-
         currentTurn = .white
         kingInCheck = nil
         checkmateWinner = nil
-
         whiteAdvantage = 0
         blackAdvantage = 0
-
         SoundManager.shared.gameStart()
         reloadBoard?()
     }

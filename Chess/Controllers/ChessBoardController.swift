@@ -48,19 +48,16 @@ final class ChessBoardController: UIViewController {
             capturedTop.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             capturedTop.heightAnchor.constraint(equalToConstant: 40),
 
-            // BOARD (BIG)
             boardView.topAnchor.constraint(equalTo: capturedTop.bottomAnchor, constant: 8),
             boardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             boardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             boardView.heightAnchor.constraint(equalTo: boardView.widthAnchor),
 
-            // your captured pieces (BOTTOM)
             capturedBottom.topAnchor.constraint(equalTo: boardView.bottomAnchor, constant: 8),
             capturedBottom.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             capturedBottom.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             capturedBottom.heightAnchor.constraint(equalToConstant: 40),
 
-            // MOVE HISTORY (scrollable area)
             historyView.topAnchor.constraint(equalTo: capturedBottom.bottomAnchor, constant: 8),
             historyView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             historyView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -76,7 +73,6 @@ final class ChessBoardController: UIViewController {
         collection.delegate = self
     }
 
-    // MARK: VIEWMODEL BINDING
 
     private func bindViewModel() {
 
@@ -99,7 +95,6 @@ final class ChessBoardController: UIViewController {
                 score: self.viewModel.whiteAdvantage
             )
 
-            // 🔥 move history update
             self.historyView.configure(with: self.viewModel.moveHistory)
 
             if let winner = self.viewModel.checkmateWinner {
@@ -121,7 +116,6 @@ final class ChessBoardController: UIViewController {
         }
     }
 
-    // MARK: TITLE
 
     private func updateTitle() {
         if let color = viewModel.kingInCheck {
@@ -131,7 +125,6 @@ final class ChessBoardController: UIViewController {
         }
     }
 
-    // MARK: GAME OVER ALERT
 
     private func showGameOverAlert(winner: PieceColor) {
 
@@ -147,8 +140,6 @@ final class ChessBoardController: UIViewController {
 
         present(alert, animated: true)
     }
-
-    // MARK: MOVE ANIMATION
 
     private func animateMove(from old:(Int,Int), to new:(Int,Int)) {
 
