@@ -40,9 +40,18 @@ enum PawnMoves {
             moves.append((oneStepRow, rightCol))
         }
 
+        if let target = EnPassantManager.shared.targetSquare {
+
+            if abs(target.col - piece.col) == 1 &&
+               target.row == piece.row + direction {
+                moves.append(target)
+            }
+        }
+
         return moves
     }
 }
+
 private extension PawnMoves {
 
     static func isInsideBoard(row: Int, col: Int) -> Bool {

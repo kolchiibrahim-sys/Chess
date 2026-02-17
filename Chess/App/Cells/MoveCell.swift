@@ -15,34 +15,41 @@ final class MoveCell: UITableViewCell {
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
 
-        numberLabel.font = .boldSystemFont(ofSize: 14)
-        numberLabel.textColor = .secondaryLabel
+        backgroundColor = .clear
+        selectionStyle = .none
 
-        whiteLabel.font = .systemFont(ofSize: 16, weight: .medium)
-        blackLabel.font = .systemFont(ofSize: 16, weight: .medium)
+        numberLabel.font = .boldSystemFont(ofSize: 13)
+        numberLabel.textColor = .secondaryLabel
+        numberLabel.widthAnchor.constraint(equalToConstant: 30).isActive = true
+
+        whiteLabel.font = .systemFont(ofSize: 15, weight: .medium)
+        blackLabel.font = .systemFont(ofSize: 15, weight: .medium)
 
         let stack = UIStackView(arrangedSubviews: [
-            numberLabel, whiteLabel, blackLabel
+            numberLabel,
+            whiteLabel,
+            blackLabel
         ])
-        stack.axis = .horizontal
-        stack.distribution = .fillEqually
+
+        stack.spacing = 6
+        stack.alignment = .center
 
         contentView.addSubview(stack)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 6),
+            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -6),
             stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 6),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -6),
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -6)
         ])
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(move: MoveRecord, index: Int) {
-        numberLabel.text = "\(index + 1)."
+    func configure(move: MoveRecord, row: Int) {
+        numberLabel.text = "\(row + 1)."
         whiteLabel.text = move.whiteMove ?? "-"
-        blackLabel.text = move.blackMove ?? "-"
+        blackLabel.text = move.blackMove ?? ""
     }
 }

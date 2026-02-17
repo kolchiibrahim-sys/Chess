@@ -8,8 +8,9 @@ import UIKit
 
 final class MoveHistoryView: UIView {
 
-    private let tableView = UITableView()
     private var moves: [MoveRecord] = []
+
+    private let tableView = UITableView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -20,51 +21,61 @@ final class MoveHistoryView: UIView {
 
     private func setup() {
 
-        backgroundColor = .systemGray6
-
-        tableView.register(MoveCell.self, forCellReuseIdentifier: "MoveCell")
-        tableView.dataSource = self
-        tableView.separatorStyle = .none
+        backgroundColor = UIColor.secondarySystemBackground
+        layer.cornerRadius = 12
 
         addSubview(tableView)
         tableView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: topAnchor),
-            tableView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            tableView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: trailingAnchor)
+            tableView.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            tableView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            tableView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            tableView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4)
         ])
+
+        tableView.register(MoveCell.self, forCellReuseIdentifier: "MoveCell")
+        tableView.dataSource = self
+        tableView.separatorStyle = .none
+        tableView.backgroundColor = .clear
     }
 
     func configure(with moves: [MoveRecord]) {
         self.moves = moves
         tableView.reloadData()
+        scrollToBottom()
+    }
 
-        // son gedişə scroll et
-        if moves.count > 0 {
-            let index = IndexPath(row: moves.count - 1, section: 0)
-            tableView.scrollToRow(at: index, at: .bottom, animated: true)
+    private func scrollToBottom() {
+
+        guard moves.count > 0 else { return }
+
+        let lastRow = moves.count - 1
+        let indexPath = IndexPath(row: lastRow, section: 0)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            self.tableView.scrollToRow(
+                at: indexPath,
+                at: .bottom,
+                animated: true
+            )
         }
     }
 }
 
 extension MoveHistoryView: UITableViewDataSource {
 
-    func tableView(_ tableView: UITableView,
-                   numberOfRowsInSection section: Int) -> Int {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         moves.count
     }
 
     func tableView(_ tableView: UITableView,
                    cellForRowAt indexPath: IndexPath) -> UITableViewCell {
 
-        let cell = tableView.dequeueReusableCell(
-            withIdentifier: "MoveCell",
-            for: indexPath
-        ) as! MoveCell
+        let cell = tableView.dequeueReusableCell(withIdentifier: "MoveCell",
+                                                 for: indexPath) as! MoveCell
 
-        cell.configure(move: moves[indexPath.row], index: indexPath.row)
+        cell.configure(move: moves[indexPath.row], row: indexPath.row)
         return cell
     }
 }

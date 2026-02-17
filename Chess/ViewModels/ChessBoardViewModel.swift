@@ -84,16 +84,12 @@ final class ChessBoardViewModel {
         if toCol == 6 {
             if let rookIndex = pieces.firstIndex(where: { $0.type == .rook && $0.row == row && $0.col == 7 }) {
                 let rook = pieces.remove(at: rookIndex)
-                pieces.append(
-                    ChessPiece(type: .rook, color: rook.color, row: row, col: 5, hasMoved: true)
-                )
+                pieces.append(ChessPiece(type: .rook, color: rook.color, row: row, col: 5, hasMoved: true))
             }
         } else if toCol == 2 {
             if let rookIndex = pieces.firstIndex(where: { $0.type == .rook && $0.row == row && $0.col == 0 }) {
                 let rook = pieces.remove(at: rookIndex)
-                pieces.append(
-                    ChessPiece(type: .rook, color: rook.color, row: row, col: 3, hasMoved: true)
-                )
+                pieces.append(ChessPiece(type: .rook, color: rook.color, row: row, col: 3, hasMoved: true))
             }
         }
 
@@ -106,7 +102,18 @@ final class ChessBoardViewModel {
 
         let oldRow = selected.row
         let oldCol = selected.col
-        let isCapture = piece(at: row, col: col) != nil
+
+        var isCapture = false
+
+        if let target = EnPassantManager.shared.targetSquare,
+           target.row == row && target.col == col,
+           let pawn = EnPassantManager.shared.pawnToCapture {
+
+            pieces.removeAll { $0.row == pawn.row && $0.col == pawn.col }
+            pawn.color == .white ? capturedWhite.append(pawn) : capturedBlack.append(pawn)
+            SoundManager.shared.capture()
+            isCapture = true
+        }
 
         pieces.removeAll { $0.row == oldRow && $0.col == oldCol }
 
@@ -115,24 +122,21 @@ final class ChessBoardViewModel {
             captured.color == .white ? capturedWhite.append(captured) : capturedBlack.append(captured)
             pieces.remove(at: capturedIndex)
             SoundManager.shared.capture()
+            isCapture = true
         } else {
             SoundManager.shared.moveSelf()
         }
 
-        let movedPiece = ChessPiece(
-            type: selected.type,
-            color: selected.color,
-            row: row,
-            col: col,
-            hasMoved: true
-        )
-
+        let movedPiece = ChessPiece(type: selected.type, color: selected.color, row: row, col: col, hasMoved: true)
         pieces.append(movedPiece)
+
+        EnPassantManager.shared.registerDoublePawnMove(piece: movedPiece, fromRow: oldRow, toRow: row)
 
         if selected.type == .king {
             performCastlingIfNeeded(king: selected, fromCol: oldCol, toCol: col, row: row)
         }
 
+        // ⭐️ MOVE HISTORY (ƏN VACİB HİSSƏ)
         let notation = ChessNotationConverter.notation(
             piece: selected,
             fromRow: oldRow,
@@ -147,11 +151,6 @@ final class ChessBoardViewModel {
         } else {
             moveHistory.append(MoveRecord(whiteMove: pendingWhiteMove, blackMove: notation))
             pendingWhiteMove = nil
-        }
-
-        if PromotionDetector.shouldPromote(movedPiece) {
-            promotionPiece = movedPiece
-            showPromotion?()
         }
 
         currentTurn = currentTurn == .white ? .black : .white
