@@ -33,7 +33,9 @@ final class ClockView: UIView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
-
+    func uptade(time:String) {
+        label .text = time
+    }
     func setTime(_ text: String) {
         label.text = text
     }

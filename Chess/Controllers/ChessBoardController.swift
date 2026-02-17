@@ -29,7 +29,6 @@ final class ChessBoardController: UIViewController {
     }
 
     private func setupUI() {
-
         view.addSubview(capturedTop)
         view.addSubview(boardView)
         view.addSubview(capturedBottom)

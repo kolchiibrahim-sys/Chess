@@ -4,8 +4,6 @@
 //
 //  Created by Ibrahim Kolchi on 17.02.26.
 //
-
-import Foundation
 import Foundation
 
 final class ChessClockManager {
@@ -15,13 +13,21 @@ final class ChessClockManager {
 
     private var timer: Timer?
 
-    private(set) var whiteTime: Int = 600   // 10 
+    private(set) var whiteTime: Int = 600
     private(set) var blackTime: Int = 600
+    private(set) var increment: Int = 0
 
     private var currentTurn: PieceColor = .white
 
     var onTick: (() -> Void)?
     var onTimeOver: ((PieceColor) -> Void)?
+
+    func configure(settings: GameSettings) {
+        whiteTime = settings.minutes * 60
+        blackTime = settings.minutes * 60
+        increment = settings.increment
+        onTick?()
+    }
 
     func start(turn: PieceColor) {
         currentTurn = turn
@@ -29,13 +35,12 @@ final class ChessClockManager {
     }
 
     func switchTurn(to turn: PieceColor) {
+        addIncrement()
         currentTurn = turn
     }
 
     func reset() {
         timer?.invalidate()
-        whiteTime = 600
-        blackTime = 600
         onTick?()
     }
 
@@ -48,7 +53,6 @@ final class ChessClockManager {
     }
 
     private func tick() {
-
         if currentTurn == .white {
             whiteTime -= 1
             if whiteTime <= 0 {
@@ -62,8 +66,15 @@ final class ChessClockManager {
                 onTimeOver?(.black)
             }
         }
-
         onTick?()
+    }
+
+    private func addIncrement() {
+        if currentTurn == .white {
+            whiteTime += increment
+        } else {
+            blackTime += increment
+        }
     }
 
     func formattedWhiteTime() -> String { format(whiteTime) }
