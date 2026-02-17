@@ -8,9 +8,11 @@ import UIKit
 final class ChessBoardController: UIViewController {
 
     private let viewModel = ChessBoardViewModel()
+
     private let boardView = ChessBoardView()
     private let capturedTop = CapturedPiecesView()
     private let capturedBottom = CapturedPiecesView()
+    private let historyView = MoveHistoryView()
     private let promotionView = PromotionView()
 
     override func viewDidLoad() {
@@ -24,24 +26,45 @@ final class ChessBoardController: UIViewController {
         BoardAnimator.flip(boardView.collection, for: .white)
     }
 
+    // MARK: REAL CHESS LAYOUT
+
     private func setupUI() {
-        let stack = UIStackView(arrangedSubviews: [
-            capturedTop,
-            boardView,
-            capturedBottom
-        ])
 
-        stack.axis = .vertical
-        stack.spacing = 12
+        view.addSubview(capturedTop)
+        view.addSubview(boardView)
+        view.addSubview(capturedBottom)
+        view.addSubview(historyView)
 
-        view.addSubview(stack)
-        stack.translatesAutoresizingMaskIntoConstraints = false
+        capturedTop.translatesAutoresizingMaskIntoConstraints = false
+        boardView.translatesAutoresizingMaskIntoConstraints = false
+        capturedBottom.translatesAutoresizingMaskIntoConstraints = false
+        historyView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
-            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            boardView.heightAnchor.constraint(equalTo: boardView.widthAnchor)
+
+            // opponent captured pieces (TOP)
+            capturedTop.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            capturedTop.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            capturedTop.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            capturedTop.heightAnchor.constraint(equalToConstant: 40),
+
+            // BOARD (BIG)
+            boardView.topAnchor.constraint(equalTo: capturedTop.bottomAnchor, constant: 8),
+            boardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            boardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            boardView.heightAnchor.constraint(equalTo: boardView.widthAnchor),
+
+            // your captured pieces (BOTTOM)
+            capturedBottom.topAnchor.constraint(equalTo: boardView.bottomAnchor, constant: 8),
+            capturedBottom.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            capturedBottom.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            capturedBottom.heightAnchor.constraint(equalToConstant: 40),
+
+            // MOVE HISTORY (scrollable area)
+            historyView.topAnchor.constraint(equalTo: capturedBottom.bottomAnchor, constant: 8),
+            historyView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            historyView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            historyView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 
@@ -52,6 +75,8 @@ final class ChessBoardController: UIViewController {
         collection.dataSource = self
         collection.delegate = self
     }
+
+    // MARK: VIEWMODEL BINDING
 
     private func bindViewModel() {
 
@@ -73,6 +98,13 @@ final class ChessBoardController: UIViewController {
                 with: self.viewModel.capturedWhite,
                 score: self.viewModel.whiteAdvantage
             )
+
+            // 🔥 move history update
+            self.historyView.configure(with: self.viewModel.moveHistory)
+
+            if let winner = self.viewModel.checkmateWinner {
+                self.showGameOverAlert(winner: winner)
+            }
         }
 
         viewModel.didMovePiece = { [weak self] r1,c1,r2,c2 in
@@ -88,10 +120,23 @@ final class ChessBoardController: UIViewController {
             }
         }
     }
+
+    // MARK: TITLE
+
+    private func updateTitle() {
+        if let color = viewModel.kingInCheck {
+            title = "CHECK ⚠️ \(color == .white ? "White" : "Black") king"
+        } else {
+            title = "Chess ♟️"
+        }
+    }
+
+    // MARK: GAME OVER ALERT
+
     private func showGameOverAlert(winner: PieceColor) {
 
         let alert = UIAlertController(
-            title: "Game Over",
+            title: "CHECKMATE 👑",
             message: "\(winner == .white ? "White" : "Black") wins!",
             preferredStyle: .alert
         )
@@ -102,21 +147,8 @@ final class ChessBoardController: UIViewController {
 
         present(alert, animated: true)
     }
-    private func updateTitle() {
 
-        if let winner = viewModel.checkmateWinner {
-
-            title = "CHECKMATE 👑 \(winner == .white ? "White" : "Black") wins"
-            showGameOverAlert(winner: winner)
-            return
-        }
-
-        if let color = viewModel.kingInCheck {
-            title = "CHECK ⚠️ \(color == .white ? "White" : "Black") king"
-        } else {
-            title = "Chess ♟️"
-        }
-    }
+    // MARK: MOVE ANIMATION
 
     private func animateMove(from old:(Int,Int), to new:(Int,Int)) {
 
@@ -145,12 +177,9 @@ final class ChessBoardController: UIViewController {
         }
     }
 }
-
 extension ChessBoardController: UICollectionViewDataSource {
 
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        64
-    }
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int { 64 }
 
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -166,11 +195,11 @@ extension ChessBoardController: UICollectionViewDataSource {
         let piece = viewModel.piece(at: row, col: col)
 
         let isSelected =
-            viewModel.selectedPiece?.row == row &&
-            viewModel.selectedPiece?.col == col
+        viewModel.selectedPiece?.row == row &&
+        viewModel.selectedPiece?.col == col
 
         let isPossibleMove =
-            viewModel.possibleMoves.contains { $0.row == row && $0.col == col }
+        viewModel.possibleMoves.contains { $0.row == row && $0.col == col }
 
         let isKingInCheck = viewModel.isKingCell(row: row, col: col)
 
@@ -188,7 +217,6 @@ extension ChessBoardController: UICollectionViewDataSource {
 }
 
 extension ChessBoardController: UICollectionViewDelegate {
-
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let row = indexPath.item / 8
         let col = indexPath.item % 8

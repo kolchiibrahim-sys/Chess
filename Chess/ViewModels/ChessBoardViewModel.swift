@@ -3,7 +3,6 @@
 //  Chess
 //
 //  Created by Ibrahim Kolchi on 16.02.26.
-//
 import Foundation
 
 final class ChessBoardViewModel {
@@ -25,9 +24,15 @@ final class ChessBoardViewModel {
     private(set) var promotionPiece: ChessPiece?
     var showPromotion: (() -> Void)?
 
+    // MARK: Move history (notation)
+    private(set) var moveHistory: [MoveRecord] = []
+    private var pendingWhiteMove: String?
+
+    // MARK: Bindings
     var reloadBoard: (() -> Void)?
     var didMovePiece: ((_ r1:Int,_ c1:Int,_ r2:Int,_ c2:Int) -> Void)?
 
+    // MARK: Fetch board
     func fetchBoard() {
         LocalNetworkManager.shared.fetchBoard { [weak self] result in
             switch result {
@@ -40,6 +45,7 @@ final class ChessBoardViewModel {
         }
     }
 
+    // MARK: Helpers
     func piece(at row: Int, col: Int) -> ChessPiece? {
         pieces.first { $0.row == row && $0.col == col }
     }
@@ -54,6 +60,7 @@ final class ChessBoardViewModel {
         }
     }
 
+    // MARK: Selection
     func selectPiece(at row: Int, col: Int) {
 
         if let selected = selectedPiece,
@@ -75,6 +82,7 @@ final class ChessBoardViewModel {
         reloadBoard?()
     }
 
+    // MARK: CORE MOVE ENGINE
     private func movePiece(to row: Int, col: Int) {
 
         guard let selected = selectedPiece else { return }
@@ -82,18 +90,14 @@ final class ChessBoardViewModel {
         let oldRow = selected.row
         let oldCol = selected.col
 
+        let isCapture = piece(at: row, col: col) != nil
+
         pieces.removeAll { $0.row == oldRow && $0.col == oldCol }
 
         if let capturedIndex = pieces.firstIndex(where: { $0.row == row && $0.col == col }) {
 
             let captured = pieces[capturedIndex]
-
-            if captured.color == .white {
-                capturedWhite.append(captured)
-            } else {
-                capturedBlack.append(captured)
-            }
-
+            captured.color == .white ? capturedWhite.append(captured) : capturedBlack.append(captured)
             pieces.remove(at: capturedIndex)
             SoundManager.shared.capture()
 
@@ -111,13 +115,38 @@ final class ChessBoardViewModel {
 
         pieces.append(movedPiece)
 
+        // MARK: CHESS NOTATION
+        let notation = ChessNotationConverter.notation(
+            piece: selected,
+            fromRow: oldRow,
+            fromCol: oldCol,
+            toRow: row,
+            toCol: col,
+            capture: isCapture
+        )
+
+        if selected.color == .white {
+            pendingWhiteMove = notation
+        } else {
+            moveHistory.append(
+                MoveRecord(
+                    whiteMove: pendingWhiteMove,
+                    blackMove: notation
+                )
+            )
+            pendingWhiteMove = nil
+        }
+
+        // Promotion trigger
         if PromotionDetector.shouldPromote(movedPiece) {
             promotionPiece = movedPiece
             showPromotion?()
         }
 
+        // Turn change
         currentTurn = currentTurn == .white ? .black : .white
 
+        // CHECK detection
         if CheckValidator.isKingInCheck(color: .white, pieces: pieces) {
             kingInCheck = .white
             SoundManager.shared.check()
@@ -130,6 +159,7 @@ final class ChessBoardViewModel {
             kingInCheck = nil
         }
 
+        // CHECKMATE detection
         if CheckmateValidator.isCheckmate(color: .white, pieces: pieces) {
             checkmateWinner = .black
             SoundManager.shared.gameEnd()
@@ -153,41 +183,37 @@ final class ChessBoardViewModel {
     }
 
     func promotePawn(to option: PromotionOption) {
-        
         guard let pawn = promotionPiece else { return }
-        
-        pieces.removeAll {
-            $0.row == pawn.row && $0.col == pawn.col
-        }
-        
+
+        pieces.removeAll { $0.row == pawn.row && $0.col == pawn.col }
         let promoted = PromotionHandler.promote(piece: pawn, to: option)
         pieces.append(promoted)
-        
+
         SoundManager.shared.promote()
-        
         promotionPiece = nil
         reloadBoard?()
     }
-        func resetGame() {
-            
-            pieces = GameResetManager.initialBoard()
 
-            capturedWhite.removeAll()
-            capturedBlack.removeAll()
+    func resetGame() {
 
-            selectedPiece = nil
-            possibleMoves.removeAll()
+        pieces = GameResetManager.initialBoard()
 
-            currentTurn = .white
-            kingInCheck = nil
-            checkmateWinner = nil
+        capturedWhite.removeAll()
+        capturedBlack.removeAll()
+        moveHistory.removeAll()
+        pendingWhiteMove = nil
 
-            whiteAdvantage = 0
-            blackAdvantage = 0
+        selectedPiece = nil
+        possibleMoves.removeAll()
 
-            SoundManager.shared.gameStart()
-            reloadBoard?()
-        }
+        currentTurn = .white
+        kingInCheck = nil
+        checkmateWinner = nil
 
+        whiteAdvantage = 0
+        blackAdvantage = 0
+
+        SoundManager.shared.gameStart()
+        reloadBoard?()
     }
-
+}
