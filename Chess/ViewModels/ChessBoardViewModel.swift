@@ -8,8 +8,6 @@ import Foundation
 
 final class ChessBoardViewModel {
 
-    // MARK: - STATE
-
     private(set) var pieces: [ChessPiece] = []
     private(set) var selectedPiece: ChessPiece?
     private(set) var possibleMoves: [(row:Int,col:Int)] = []
@@ -24,28 +22,23 @@ final class ChessBoardViewModel {
     private(set) var whiteAdvantage: Int = 0
     private(set) var blackAdvantage: Int = 0
 
-    // MARK: - Bindings
+    private(set) var promotionPiece: ChessPiece?
+    var showPromotion: (() -> Void)?
 
     var reloadBoard: (() -> Void)?
     var didMovePiece: ((_ r1:Int,_ c1:Int,_ r2:Int,_ c2:Int) -> Void)?
-
-    // MARK: - FETCH BOARD (MOCK)
 
     func fetchBoard() {
         LocalNetworkManager.shared.fetchBoard { [weak self] result in
             switch result {
             case .success(let pieces):
                 self?.pieces = pieces
-                DispatchQueue.main.async {
-                    self?.reloadBoard?()
-                }
+                DispatchQueue.main.async { self?.reloadBoard?() }
             case .failure(let error):
                 print("Fetch error:", error)
             }
         }
     }
-
-    // MARK: - HELPERS
 
     func piece(at row: Int, col: Int) -> ChessPiece? {
         pieces.first { $0.row == row && $0.col == col }
@@ -61,18 +54,14 @@ final class ChessBoardViewModel {
         }
     }
 
-    // MARK: - SELECT PIECE / TAP LOGIC
-
     func selectPiece(at row: Int, col: Int) {
 
-        // əgər fiqur seçilib və possible move-dursa → move et
         if let selected = selectedPiece,
            possibleMoves.contains(where: { $0.row == row && $0.col == col }) {
             movePiece(to: row, col: col)
             return
         }
 
-        // yeni fiqur seç
         guard let piece = piece(at: row, col: col),
               piece.color == currentTurn else {
             selectedPiece = nil
@@ -86,8 +75,6 @@ final class ChessBoardViewModel {
         reloadBoard?()
     }
 
-    // MARK: - MOVE PIECE (CORE ENGINE)
-
     private func movePiece(to row: Int, col: Int) {
 
         guard let selected = selectedPiece else { return }
@@ -95,10 +82,8 @@ final class ChessBoardViewModel {
         let oldRow = selected.row
         let oldCol = selected.col
 
-        // selected fiquru sil
         pieces.removeAll { $0.row == oldRow && $0.col == oldCol }
 
-        // CAPTURE varsa
         if let capturedIndex = pieces.firstIndex(where: { $0.row == row && $0.col == col }) {
 
             let captured = pieces[capturedIndex]
@@ -116,7 +101,6 @@ final class ChessBoardViewModel {
             SoundManager.shared.moveSelf()
         }
 
-        // yeni mövqedə fiquru əlavə et
         let movedPiece = ChessPiece(
             type: selected.type,
             color: selected.color,
@@ -127,10 +111,13 @@ final class ChessBoardViewModel {
 
         pieces.append(movedPiece)
 
-        // TURN dəyiş
+        if PromotionDetector.shouldPromote(movedPiece) {
+            promotionPiece = movedPiece
+            showPromotion?()
+        }
+
         currentTurn = currentTurn == .white ? .black : .white
 
-        // CHECK detection
         if CheckValidator.isKingInCheck(color: .white, pieces: pieces) {
             kingInCheck = .white
             SoundManager.shared.check()
@@ -143,7 +130,6 @@ final class ChessBoardViewModel {
             kingInCheck = nil
         }
 
-        // CHECKMATE detection
         if CheckmateValidator.isCheckmate(color: .white, pieces: pieces) {
             checkmateWinner = .black
             SoundManager.shared.gameEnd()
@@ -154,18 +140,54 @@ final class ChessBoardViewModel {
             SoundManager.shared.gameEnd()
         }
 
-        // seçimləri sıfırla
         selectedPiece = nil
         possibleMoves.removeAll()
 
-        // animasiya üçün callback
         didMovePiece?(oldRow, oldCol, row, col)
 
-        // material score hesabla
         let advantage = MaterialCalculator.materialAdvantage(pieces: pieces)
         whiteAdvantage = advantage.white
         blackAdvantage = advantage.black
 
         reloadBoard?()
     }
-}
+
+    func promotePawn(to option: PromotionOption) {
+        
+        guard let pawn = promotionPiece else { return }
+        
+        pieces.removeAll {
+            $0.row == pawn.row && $0.col == pawn.col
+        }
+        
+        let promoted = PromotionHandler.promote(piece: pawn, to: option)
+        pieces.append(promoted)
+        
+        SoundManager.shared.promote()
+        
+        promotionPiece = nil
+        reloadBoard?()
+    }
+        func resetGame() {
+            
+            pieces = GameResetManager.initialBoard()
+
+            capturedWhite.removeAll()
+            capturedBlack.removeAll()
+
+            selectedPiece = nil
+            possibleMoves.removeAll()
+
+            currentTurn = .white
+            kingInCheck = nil
+            checkmateWinner = nil
+
+            whiteAdvantage = 0
+            blackAdvantage = 0
+
+            SoundManager.shared.gameStart()
+            reloadBoard?()
+        }
+
+    }
+

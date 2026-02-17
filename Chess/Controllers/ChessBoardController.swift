@@ -11,6 +11,7 @@ final class ChessBoardController: UIViewController {
     private let boardView = ChessBoardView()
     private let capturedTop = CapturedPiecesView()
     private let capturedBottom = CapturedPiecesView()
+    private let promotionView = PromotionView()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -77,11 +78,36 @@ final class ChessBoardController: UIViewController {
         viewModel.didMovePiece = { [weak self] r1,c1,r2,c2 in
             self?.animateMove(from: (r1,c1), to: (r2,c2))
         }
-    }
 
+        viewModel.showPromotion = { [weak self] in
+            guard let self else { return }
+            self.view.addSubview(self.promotionView)
+            self.promotionView.frame = self.view.bounds
+            self.promotionView.onSelect = { option in
+                self.viewModel.promotePawn(to: option)
+            }
+        }
+    }
+    private func showGameOverAlert(winner: PieceColor) {
+
+        let alert = UIAlertController(
+            title: "Game Over",
+            message: "\(winner == .white ? "White" : "Black") wins!",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "New Game", style: .default) { _ in
+            self.viewModel.resetGame()
+        })
+
+        present(alert, animated: true)
+    }
     private func updateTitle() {
+
         if let winner = viewModel.checkmateWinner {
+
             title = "CHECKMATE 👑 \(winner == .white ? "White" : "Black") wins"
+            showGameOverAlert(winner: winner)
             return
         }
 
