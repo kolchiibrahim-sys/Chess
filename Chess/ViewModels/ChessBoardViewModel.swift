@@ -57,7 +57,6 @@ final class ChessBoardViewModel {
     }
 
     func selectPiece(at row: Int, col: Int) {
-
         if let selected = selectedPiece,
            possibleMoves.contains(where: { $0.row == row && $0.col == col }) {
             movePiece(to: row, col: col)
@@ -78,7 +77,6 @@ final class ChessBoardViewModel {
     }
 
     private func performCastlingIfNeeded(king: ChessPiece, fromCol: Int, toCol: Int, row: Int) {
-
         if abs(fromCol - toCol) != 2 { return }
 
         if toCol == 6 {
@@ -110,7 +108,13 @@ final class ChessBoardViewModel {
            let pawn = EnPassantManager.shared.pawnToCapture {
 
             pieces.removeAll { $0.row == pawn.row && $0.col == pawn.col }
-            pawn.color == .white ? capturedWhite.append(pawn) : capturedBlack.append(pawn)
+
+            if selected.color == .white {
+                capturedWhite.append(pawn)
+            } else {
+                capturedBlack.append(pawn)
+            }
+
             SoundManager.shared.capture()
             isCapture = true
         }
@@ -118,11 +122,19 @@ final class ChessBoardViewModel {
         pieces.removeAll { $0.row == oldRow && $0.col == oldCol }
 
         if let capturedIndex = pieces.firstIndex(where: { $0.row == row && $0.col == col }) {
+
             let captured = pieces[capturedIndex]
-            captured.color == .white ? capturedWhite.append(captured) : capturedBlack.append(captured)
+
+            if selected.color == .white {
+                capturedWhite.append(captured)
+            } else {
+                capturedBlack.append(captured)
+            }
+
             pieces.remove(at: capturedIndex)
             SoundManager.shared.capture()
             isCapture = true
+
         } else {
             SoundManager.shared.moveSelf()
         }
@@ -136,7 +148,6 @@ final class ChessBoardViewModel {
             performCastlingIfNeeded(king: selected, fromCol: oldCol, toCol: col, row: row)
         }
 
-        // ⭐️ MOVE HISTORY (ƏN VACİB HİSSƏ)
         let notation = ChessNotationConverter.notation(
             piece: selected,
             fromRow: oldRow,
