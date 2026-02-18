@@ -100,8 +100,7 @@ final class ChessBoardController: UIViewController {
             self.updateTitle()
             self.boardView.collection.reloadData()
 
-            BoardAnimator.flip(self.boardView.collection,
-                               for: self.viewModel.currentTurn)
+            BoardAnimator.flip(self.boardView.collection, for: self.viewModel.currentTurn)
 
             self.capturedTop.configure(
                 with: self.viewModel.capturedBlack,
@@ -204,13 +203,21 @@ extension ChessBoardController: UICollectionViewDataSource {
         let piece = viewModel.piece(at: row, col: col)
 
         let isSelected =
-        viewModel.selectedPiece?.row == row &&
-        viewModel.selectedPiece?.col == col
+            viewModel.selectedPiece?.row == row &&
+            viewModel.selectedPiece?.col == col
 
         let isPossibleMove =
-        viewModel.possibleMoves.contains { $0.row == row && $0.col == col }
+            viewModel.possibleMoves.contains { $0.row == row && $0.col == col }
 
         let isKingInCheck = viewModel.isKingCell(row: row, col: col)
+
+        let isLastMoveFrom =
+            viewModel.lastMoveFrom?.row == row &&
+            viewModel.lastMoveFrom?.col == col
+
+        let isLastMoveTo =
+            viewModel.lastMoveTo?.row == row &&
+            viewModel.lastMoveTo?.col == col
 
         cell.configure(
             row: row,
@@ -218,7 +225,9 @@ extension ChessBoardController: UICollectionViewDataSource {
             piece: piece,
             isSelected: isSelected,
             isPossibleMove: isPossibleMove,
-            isKingInCheck: isKingInCheck
+            isKingInCheck: isKingInCheck,
+            isLastMoveFrom: isLastMoveFrom,
+            isLastMoveTo: isLastMoveTo
         )
 
         return cell

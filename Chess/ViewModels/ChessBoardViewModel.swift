@@ -18,6 +18,9 @@ final class ChessBoardViewModel {
     private(set) var kingInCheck: PieceColor?
     private(set) var checkmateWinner: PieceColor?
 
+    private(set) var lastMoveFrom: (row:Int,col:Int)?
+    private(set) var lastMoveTo: (row:Int,col:Int)?
+
     private(set) var whiteAdvantage: Int = 0
     private(set) var blackAdvantage: Int = 0
 
@@ -109,11 +112,8 @@ final class ChessBoardViewModel {
 
             pieces.removeAll { $0.row == pawn.row && $0.col == pawn.col }
 
-            if selected.color == .white {
-                capturedWhite.append(pawn)
-            } else {
-                capturedBlack.append(pawn)
-            }
+            if selected.color == .white { capturedWhite.append(pawn) }
+            else { capturedBlack.append(pawn) }
 
             SoundManager.shared.capture()
             isCapture = true
@@ -122,19 +122,14 @@ final class ChessBoardViewModel {
         pieces.removeAll { $0.row == oldRow && $0.col == oldCol }
 
         if let capturedIndex = pieces.firstIndex(where: { $0.row == row && $0.col == col }) {
-
             let captured = pieces[capturedIndex]
 
-            if selected.color == .white {
-                capturedWhite.append(captured)
-            } else {
-                capturedBlack.append(captured)
-            }
+            if selected.color == .white { capturedWhite.append(captured) }
+            else { capturedBlack.append(captured) }
 
             pieces.remove(at: capturedIndex)
             SoundManager.shared.capture()
             isCapture = true
-
         } else {
             SoundManager.shared.moveSelf()
         }
@@ -189,6 +184,9 @@ final class ChessBoardViewModel {
 
         selectedPiece = nil
         possibleMoves.removeAll()
+
+        lastMoveFrom = (oldRow, oldCol)
+        lastMoveTo = (row, col)
 
         didMovePiece?(oldRow, oldCol, row, col)
 
