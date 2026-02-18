@@ -137,6 +137,11 @@ final class ChessBoardViewModel {
         let movedPiece = ChessPiece(type: selected.type, color: selected.color, row: row, col: col, hasMoved: true)
         pieces.append(movedPiece)
 
+        if PromotionDetector.shouldPromote(movedPiece) {
+            promotionPiece = movedPiece
+            showPromotion?()
+        }
+
         EnPassantManager.shared.registerDoublePawnMove(piece: movedPiece, fromRow: oldRow, toRow: row)
 
         if selected.type == .king {

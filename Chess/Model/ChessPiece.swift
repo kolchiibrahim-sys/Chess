@@ -45,8 +45,15 @@ struct ChessPiece: Codable {
         color = try container.decode(PieceColor.self, forKey: .color)
         row = try container.decode(Int.self, forKey: .row)
         col = try container.decode(Int.self, forKey: .col)
-        
-        // JSON-da yoxdursa default false olsun
         hasMoved = try container.decodeIfPresent(Bool.self, forKey: .hasMoved) ?? false
     }
+}
+
+extension ChessPiece {
+
+    var imageName: String {
+        let colorPrefix = color == .white ? "white" : "black"
+        return "\(colorPrefix)_\(type.rawValue)"
+    }
+
 }
